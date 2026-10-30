@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TED-Ed Practice</title>
+<style>
+:root{
+  --bg:#f6f4ef; --panel:#fff; --ink:#1f2328; --sub:#6b6f76; --line:#e3dfd6;
+  --accent:#c2410c; --accent-soft:#fdebe1; --cur:#fff4cf; --star:#e0a800; --sec:#5b6470;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#16181b; --panel:#1f2226; --ink:#e7e5e0; --sub:#9a9ea5; --line:#33373d;
+    --accent:#f08a4b; --accent-soft:#3a2a20; --cur:#3a3420; --sec:#9aa3ad; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,"Hiragino Sans","Helvetica Neue",sans-serif}
+header{position:sticky;top:0;z-index:6;background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+header h1{font-size:17px;margin:0}
+select,.btn{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:4px 10px;cursor:pointer}
+header select{max-width:100%;min-width:0}
+.btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:none;border-radius:0;border-right:1px solid var(--line)} .seg button:last-child{border-right:none}
+main{max-width:860px;margin:0 auto;padding:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.title{font-size:20px;font-weight:700;margin:0} .title small{display:block;font-weight:400;color:var(--sub);font-size:14px}
+/* 映像: 一覧をスクロールしても上に残す */
+.screen{position:sticky;top:52px;z-index:5;background:var(--panel);padding:8px 0 6px}
+.vbox{position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:16/9;max-height:38vh;margin:0 auto}
+.vbox iframe,.vbox #yt{position:absolute;inset:0;width:100%;height:100%;border:0}
+.controls{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;font-size:13px}
+.controls label{color:var(--sub)}
+.controls .btn{padding:3px 9px;font-size:13px} .controls select{font-size:13px;padding:2px 4px}
+.sec{margin:16px 0 4px;padding:2px 8px;font-size:13px;font-weight:700;color:var(--sec);border-left:3px solid var(--accent)}
+.row{display:grid;grid-template-columns:22px 40px 1fr 30px;gap:8px;padding:7px 6px;border-radius:8px}
+.row:hover{background:var(--accent-soft)} .row.cur{background:var(--cur)} .row.hide{display:none}
+.no{font-size:12px;color:var(--sub);text-align:center}
+.chk{width:17px;height:17px;margin:5px 0 0;accent-color:var(--accent);cursor:pointer}
+.playb{display:block;margin:2px auto 0;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:14px;width:32px;height:24px;font-size:11px;cursor:pointer}
+.txt{cursor:pointer;font-size:18px;line-height:1.5;min-height:28px}
+.bars{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding-top:6px}
+.bars i{display:inline-block;height:11px;border-radius:6px;background:var(--line)}
+.txt:hover .bars i{background:var(--sub)}
+.ja{font-size:14px;color:var(--sub);margin-top:2px}
+.ja .lab{display:inline-block;font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 4px;margin-right:6px;vertical-align:1px}
+.ja.jsub{color:var(--ink)}
+.note{font-size:13px;color:var(--sub);margin-top:2px}
+.starb{border:none;background:none;font-size:22px;line-height:1;color:var(--line);cursor:pointer;padding:2px 0;align-self:start}
+.starb.on{color:var(--star)}
+.floatbar{position:sticky;bottom:14px;display:flex;justify-content:center;margin-top:10px;z-index:4;pointer-events:none}
+.floatin{pointer-events:auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:8px 12px;box-shadow:0 4px 14px rgba(0,0,0,.14);display:flex;flex-direction:column;gap:6px;max-width:100%}
+.floatin.folded{padding:5px 10px;border-radius:999px} .floatin.folded .more{display:none}
+.kbd{font-size:12px;color:var(--sub);margin-top:12px}
+kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:12px;background:var(--panel)}
+.credit{font-size:12px;color:var(--sub);margin-top:14px;line-height:1.7}
+.credit a{color:var(--sub)}
+@media (max-width:600px){ main{padding:10px} .card{padding:10px} .txt{font-size:16px} .kbd{display:none} }
+</style>
+</head>
+<body>
+<header>
+  <h1>TED-Ed Practice</h1>
+  <select id="talkSel"></select>
+</header>
+<main>
+  <div class="card">
+    <p class="title" id="tTitle"></p>
+    <div class="screen"><div class="vbox"><div id="yt"></div></div></div>
+    <div id="lines"></div>
+    <div class="floatbar"><div class="floatin" id="panel">
+      <div class="controls more">
+        <button class="btn" id="playAll">▶ 通しで再生</button>
+        <button class="btn" id="stepMode">1行ずつ止める</button>
+        <label>くり返し <select id="repeat"><option value="1">1回</option><option value="2">2回</option><option value="3">3回</option><option value="0">ずっと</option></select></label>
+        <span class="seg"><button class="btn" data-all="0">全部隠す</button><button class="btn" data-all="1">全部見る</button></span>
+        <label>和訳 <select id="jaMode"><option value="open">英文と一緒に</option><option value="always">いつも出す</option><option value="off">出さない</option></select></label>
+        <label>表示 <select id="filter"><option value="all">全部の行</option><option value="star">★の行だけ</option><option value="off">チェックなしの行だけ</option></select></label>
+        <span id="count" style="color:var(--sub)"></span>
+      </div>
+      <div class="controls">
+        <span style="color:var(--sub)">速度</span><button class="btn" id="rateDown">−</button><span id="rateTxt">100%</span><button class="btn" id="rateUp">＋</button>
+        <button class="btn" id="foldBtn">▾ 畳む</button>
+      </div>
+    </div></div>
+    <div class="kbd"><kbd>Space</kbd> 再生／停止　<kbd>A</kbd> 前の行　<kbd>S</kbd> もう一度　<kbd>D</kbd> 次の行（←→も可）　<kbd>E</kbd>/<kbd>Enter</kbd> 今の行を見る／隠す　<kbd>W</kbd> 和訳の出し方　<kbd>Q</kbd> チェック　<kbd>R</kbd> ★　<kbd>Z</kbd><kbd>X</kbd> 速度</div>
+    <div class="credit" id="credit"></div>
+  </div>
+</main>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const store = { get(k, d){ try{ const v = localStorage.getItem('ted.' + k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } },
+                set(k, v){ try{ localStorage.setItem('ted.' + k, JSON.stringify(v)); }catch(e){} } };
+let TALKS = [], T = null, player = null, ready = false;
+let cur = -1, mode = '', endAt = 0, repsLeft = 0, waitTimer = 0;
+let reveal = {}, mark = {};            // reveal: 行ごとの見る／隠す（その場だけ）、mark: ★・チェック（ブラウザに残す）
+const RATES = [0.5, 0.75, 1, 1.25];
+let rate = store.get('rate', 1);
+
+// ---------- 表示 ----------
+const L = () => T.lines;
+const isLine = i => L()[i] && L()[i].kind === 'line';
+function bars(t){ return t.split(/\s+/).map(w => `<i style="width:${Math.max(2, w.length) * 0.55}em"></i>`).join(''); }
+function textHTML(i){
+  const l = L()[i], open = !!reveal[i], jm = $('#jaMode').value, showJa = jm === 'always' || (jm === 'open' && open);
+  const jaH = !showJa ? '' : (l.jasub ? `<div class="ja jsub"><span class="lab">字幕</span>${esc(l.jasub)}</div>` : '')
+                           + (l.ja ? `<div class="ja"><span class="lab">直訳</span>${esc(l.ja)}</div>` : '');
+  const note = open && l.note ? `<div class="note">${esc(l.note)}</div>` : '';
+  return (open ? esc(l.text) : `<div class="bars">${bars(l.text)}</div>`) + jaH + note;
+}
+function key(i){ return T.id + ':' + L()[i].no; }
+function render(){
+  $('#tTitle').innerHTML = `${esc(T.title)}<small>${esc(T.sub || '')}</small>`;
+  const f = $('#filter').value;
+  $('#lines').innerHTML = L().map((l, i) => {
+    if(l.kind !== 'line') return `<div class="sec">${esc(l.text)}</div>`;
+    const m = mark[key(i)] || {}, hide = (f === 'star' && !m.star) || (f === 'off' && m.chk);
+    return `<div class="row${i === cur ? ' cur' : ''}${hide ? ' hide' : ''}" id="r${i}">
+      <input type="checkbox" class="chk" data-i="${i}" ${m.chk ? 'checked' : ''} title="チェック（Q）">
+      <div><div class="no">${l.no}</div><button class="playb" data-i="${i}" title="この行を再生">▶</button></div>
+      <div class="txt" data-i="${i}">${textHTML(i)}</div>
+      <button class="starb${m.star ? ' on' : ''}" data-i="${i}" title="★（R）">★</button></div>`;
+  }).join('');
+  const n = L().filter(l => l.kind === 'line').length, c = L().filter((l, i) => isLine(i) && (mark[key(i)] || {}).chk).length;
+  $('#count').textContent = `✓ ${c}/${n}`;
+  $('#credit').innerHTML = `動画: <a href="${esc(T.url)}" target="_blank" rel="noopener">TED-Ed（YouTube）</a>（CC BY-NC-ND 4.0）`
+    + (T.jacredit ? `　字幕の和訳: ${esc(T.jacredit)}（TED Translators）` : '') + `　直訳・注: 授業用に作成`;
+}
+function setCur(i, scroll){
+  if(cur >= 0 && $('#r' + cur)) $('#r' + cur).classList.remove('cur');
+  cur = i; const r = $('#r' + i);
+  if(r){ r.classList.add('cur'); if(scroll) r.scrollIntoView({block: 'center', behavior: 'smooth'}); }
+}
+function redrawRow(i){ const t = document.querySelector(`.txt[data-i="${i}"]`); if(t) t.innerHTML = textHTML(i); }
+function toggleMark(i, k){ const m = mark[key(i)] = {...(mark[key(i)] || {})}; m[k] = !m[k]; store.set('mark', mark); render(); }
+
+// ---------- 再生（YouTube の埋め込み） ----------
+function onYouTubeIframeAPIReady(){ init(); }
+function makePlayer(){
+  if(player){ player.cueVideoById(T.youtube); return; }
+  player = new YT.Player('yt', { videoId: T.youtube,
+    playerVars: {playsinline: 1, rel: 0, cc_load_policy: 0, iv_load_policy: 3, modestbranding: 1, controls: 1},
+    events: { onReady: () => { ready = true; player.setPlaybackRate(rate); } } });
+}
+const now = () => ready ? player.getCurrentTime() : 0;
+const playing = () => ready && player.getPlayerState() === YT.PlayerState.PLAYING;
+function nextLine(i, d){ for(let j = i + d; j >= 0 && j < L().length; j += d) if(isLine(j) && !$('#r' + j).classList.contains('hide')) return j; return -1; }
+function playLine(i){
+  if(!ready || i < 0) return;
+  clearTimeout(waitTimer); mode = 'line'; setCur(i, true);
+  repsLeft = +$('#repeat').value; endAt = L()[i].t1;
+  player.seekTo(L()[i].t0, true); player.playVideo();
+}
+function playAll(){
+  if(!ready) return; clearTimeout(waitTimer); mode = 'all';
+  const i = cur >= 0 ? cur : nextLine(-1, 1);
+  player.seekTo(Math.max(0, L()[i].t0), true); player.playVideo();
+}
+function stop(){ clearTimeout(waitTimer); if(ready) player.pauseVideo(); }
+setInterval(() => {
+  if(!playing()) return;
+  const t = now();
+  if(mode === 'line' && t >= endAt){
+    if(repsLeft === 0 || --repsLeft > 0){ player.pauseVideo(); waitTimer = setTimeout(() => { player.seekTo(L()[cur].t0, true); player.playVideo(); }, 600); }
+    else { player.pauseVideo(); mode = ''; }
+  } else if(mode === 'all'){
+    let k = -1; L().forEach((l, i) => { if(l.kind === 'line' && l.t0 <= t + 0.05) k = i; });
+    if(k >= 0 && k !== cur) setCur(k, true);
+    if($('#stepMode').classList.contains('on') && cur >= 0 && t >= L()[cur].t1){
+      player.pauseVideo(); const n = nextLine(cur, 1); if(n >= 0) setCur(n, true);
+    }
+  }
+}, 50);
+function setRate(r){ rate = r; store.set('rate', r); $('#rateTxt').textContent = Math.round(r * 100) + '%'; if(ready) player.setPlaybackRate(r); }
+function stepRate(d){ const i = RATES.indexOf(rate); setRate(RATES[Math.min(RATES.length - 1, Math.max(0, (i < 0 ? 2 : i) + d))]); }
+
+// ---------- 操作 ----------
+$('#lines').addEventListener('click', e => {
+  const el = e.target.closest('[data-i]'); if(!el) return; const i = +el.dataset.i;
+  if(el.classList.contains('playb')) playLine(i);
+  else if(el.classList.contains('txt')){ reveal[i] = !reveal[i]; redrawRow(i); setCur(i); }
+  else if(el.classList.contains('starb')) toggleMark(i, 'star');
+  else if(el.classList.contains('chk')) toggleMark(i, 'chk');
+});
+$('#playAll').onclick = () => playing() && mode === 'all' ? stop() : playAll();
+$('#stepMode').onclick = e => { e.target.classList.toggle('on'); store.set('step', e.target.classList.contains('on')); };
+document.querySelectorAll('[data-all]').forEach(b => b.onclick = () => { L().forEach((l, i) => { if(isLine(i)) reveal[i] = b.dataset.all === '1'; }); render(); });
+$('#jaMode').onchange = e => { store.set('ja', e.target.value); render(); e.target.blur(); };
+$('#repeat').onchange = e => e.target.blur();
+$('#filter').onchange = e => { render(); e.target.blur(); };
+$('#rateDown').onclick = () => stepRate(-1); $('#rateUp').onclick = () => stepRate(1);
+function setFold(f){ $('#panel').classList.toggle('folded', f); $('#foldBtn').textContent = f ? '▴ 広げる' : '▾ 畳む'; store.set('fold', f); }
+$('#foldBtn').onclick = () => setFold(!$('#panel').classList.contains('folded'));
+$('#talkSel').onchange = e => { location.hash = e.target.value; };
+window.addEventListener('hashchange', () => { const id = location.hash.slice(1); if(TALKS.some(t => t.id === id) && T.id !== id) openTalk(id); });
+document.addEventListener('keydown', e => {
+  if(e.metaKey || e.ctrlKey || e.altKey || /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName) && e.key !== ' ') return;
+  const k = e.key.toLowerCase(), c = cur >= 0 ? cur : nextLine(-1, 1);
+  if(k === ' '){ e.preventDefault(); if(playing()) stop(); else if(mode === 'all') player.playVideo(); else playLine(c); }
+  else if(k === 'a' || k === 'arrowleft'){ e.preventDefault(); const n = nextLine(c, -1); if(n >= 0) playLine(n); }
+  else if(k === 's'){ playLine(c); }
+  else if(k === 'd' || k === 'arrowright'){ e.preventDefault(); const n = cur < 0 ? c : nextLine(c, 1); if(n >= 0) playLine(n); }
+  else if(k === 'e' || k === 'enter'){ e.preventDefault(); reveal[c] = !reveal[c]; setCur(c); redrawRow(c); }
+  else if(k === 'w'){ const s = $('#jaMode'), o = ['open', 'always', 'off']; s.value = o[(o.indexOf(s.value) + 1) % 3]; s.onchange({target: s}); }
+  else if(k === 'q'){ toggleMark(c, 'chk'); }
+  else if(k === 'r'){ toggleMark(c, 'star'); }
+  else if(k === 'z'){ stepRate(-1); } else if(k === 'x'){ stepRate(1); }
+});
+
+// ---------- 読み込み ----------
+async function openTalk(id){
+  stop(); T = await fetch(`${id}.json`).then(r => r.json()); cur = -1; mode = ''; reveal = {};
+  $('#talkSel').value = id; document.title = `${T.title} – TED-Ed Practice`; store.set('last', id);
+  render(); makePlayer();
+}
+async function init(){
+  mark = store.get('mark', {});
+  $('#jaMode').value = store.get('ja', 'open'); setRate(rate); setFold(store.get('fold', false));
+  if(store.get('step', false)) $('#stepMode').classList.add('on');
+  TALKS = await fetch('talks.json').then(r => r.json());
+  $('#talkSel').innerHTML = TALKS.map(t => `<option value="${t.id}">${esc(t.title)}</option>`).join('');
+  const want = location.hash.slice(1), last = store.get('last', '');
+  const id = TALKS.some(t => t.id === want) ? want : TALKS.some(t => t.id === last) ? last : TALKS[0].id;
+  await openTalk(id);
+}
+</script>
+</body>
+</html>
