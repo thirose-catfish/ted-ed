@@ -142,7 +142,9 @@ function makePlayer(){
   if(player){ player.cueVideoById(T.youtube); return; }
   player = new YT.Player('yt', { videoId: T.youtube,
     playerVars: {playsinline: 1, rel: 0, cc_load_policy: 0, iv_load_policy: 3, modestbranding: 1, controls: 1},
-    events: { onReady: () => { ready = true; player.setPlaybackRate(rate); } } });
+    events: { onReady: () => { ready = true; player.setPlaybackRate(rate); },
+              // 動画の上の字幕は出さない（見る人の YouTube の設定で出ることがあるので、再生のたびに外す）
+              onStateChange: e => { if(e.data === YT.PlayerState.PLAYING){ try{ player.unloadModule('captions'); player.unloadModule('cc'); }catch(err){} } } } });
 }
 const now = () => ready ? player.getCurrentTime() : 0;
 const playing = () => ready && player.getPlayerState() === YT.PlayerState.PLAYING;
