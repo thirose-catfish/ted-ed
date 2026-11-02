@@ -148,7 +148,7 @@ function makePlayer(){
     playerVars: {playsinline: 1, rel: 0, cc_load_policy: 0, iv_load_policy: 3, modestbranding: 1, controls: 1},
     events: { onReady: () => { ready = true; player.setPlaybackRate(rate); },
               // 動画の上の字幕は出さない（見る人の YouTube の設定で出ることがあるので、再生のたびに外す）
-              onStateChange: e => { if(e.data === YT.PlayerState.PLAYING){ try{ player.unloadModule('captions'); player.unloadModule('cc'); }catch(err){} } } } });
+              onStateChange: e => { if(e.data === YT.PlayerState.ENDED) mode = ''; if(e.data === YT.PlayerState.PLAYING){ try{ player.unloadModule('captions'); player.unloadModule('cc'); }catch(err){} } } } });
 }
 const now = () => ready ? player.getCurrentTime() : 0;
 const playing = () => ready && player.getPlayerState() === YT.PlayerState.PLAYING;
@@ -161,8 +161,10 @@ function playLine(i){
 }
 function playAll(){
   if(!ready) return; clearTimeout(waitTimer); mode = 'all';
-  const i = cur >= 0 ? cur : nextLine(-1, 1);
-  player.seekTo(Math.max(0, L()[i].t0), true); player.playVideo();
+  // 今の行に関わらず、最初のセリフの少し前から（聞き終えた後も、もう一度通して聞けるように）
+  const v = nextLine(-1, 1), i = v >= 0 ? v : L().findIndex(l => l.kind === 'line');
+  setCur(i, true);
+  player.seekTo(Math.max(0, L()[i].t0 - 2), true); player.playVideo();
 }
 function stop(){ clearTimeout(waitTimer); if(ready) player.pauseVideo(); }
 setInterval(() => {
@@ -201,7 +203,11 @@ $('#listen').onclick = e => {
   const k = [...document.querySelectorAll('#listen input')].indexOf(e.target) + 1, K = `${T.id}:listen`, n = (mark[K] || {}).n || 0;
   mark[K] = {n: k === n ? k - 1 : k}; store.set('mark', mark); drawListen(); e.target.blur();
 };
-$('#playAll').onclick = () => playing() && mode === 'all' ? stop() : playAll();
+$('#playAll').onclick = () => {
+  if(playing() && mode === 'all') stop();
+  else if(ready && mode === 'all' && player.getPlayerState() === YT.PlayerState.PAUSED) player.playVideo();   // 通しの途中で止めていたら続きから
+  else playAll();
+};
 $('#stepMode').onclick = e => { e.target.classList.toggle('on'); store.set('step', e.target.classList.contains('on')); };
 document.querySelectorAll('[data-all]').forEach(b => b.onclick = () => { L().forEach((l, i) => { if(isLine(i)) reveal[i] = b.dataset.all === '1'; }); render(); });
 $('#jaMode').onchange = e => { store.set('ja', e.target.value); render(); e.target.blur(); };
