@@ -51,6 +51,8 @@ main{max-width:860px;margin:0 auto;padding:16px}
 .floatbar{position:sticky;bottom:14px;display:flex;justify-content:center;margin-top:10px;z-index:4;pointer-events:none}
 .floatin{pointer-events:auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:8px 12px;box-shadow:0 4px 14px rgba(0,0,0,.14);display:flex;flex-direction:column;gap:6px;max-width:100%}
 .floatin.folded{padding:5px 10px;border-radius:999px} .floatin.folded .more{display:none}
+.listen{display:inline-flex;align-items:center;gap:4px;color:var(--sub);white-space:nowrap}
+.listen input{width:16px;height:16px;margin:0;accent-color:var(--accent);cursor:pointer}
 .kbd{font-size:12px;color:var(--sub);margin-top:12px}
 kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:12px;background:var(--panel)}
 .credit{font-size:12px;color:var(--sub);margin-top:14px;line-height:1.7}
@@ -71,6 +73,7 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;paddi
     <div class="floatbar"><div class="floatin" id="panel">
       <div class="controls more">
         <button class="btn" id="playAll">▶ 通しで再生</button>
+        <span class="listen" id="listen" title="通しで聞いた回数（5回まで）">聞いた<input type="checkbox"><input type="checkbox"><input type="checkbox"><input type="checkbox"><input type="checkbox"><span id="listenN"></span></span>
         <button class="btn" id="stepMode">1行ずつ止める</button>
         <label>くり返し <select id="repeat"><option value="1">1回</option><option value="2">2回</option><option value="3">3回</option><option value="0">ずっと</option></select></label>
         <span class="seg"><button class="btn" data-all="0">全部隠す</button><button class="btn" data-all="1">全部見る</button></span>
@@ -112,6 +115,7 @@ function textHTML(i){
 }
 function key(i){ return T.id + ':' + L()[i].no; }
 function render(){
+  drawListen();
   $('#tTitle').innerHTML = `${esc(T.title)}<small>${esc(T.sub || '')}</small>`;
   const f = $('#filter').value;
   $('#lines').innerHTML = L().map((l, i) => {
@@ -186,6 +190,17 @@ $('#lines').addEventListener('click', e => {
   else if(el.classList.contains('starb')) toggleMark(i, 'star');
   else if(el.classList.contains('chk')) toggleMark(i, 'chk');
 });
+// 通しで聞いた回数（5回まで、教材ごと）。押した箱までチェックが付き、いちばん右のチェックを押すと1つ減る
+function drawListen(){
+  const n = (mark[`${T.id}:listen`] || {}).n || 0;
+  document.querySelectorAll('#listen input').forEach((c, i) => c.checked = i < n);
+  $('#listenN').textContent = `${n}/5`;
+}
+$('#listen').onclick = e => {
+  if(e.target.tagName !== 'INPUT') return;
+  const k = [...document.querySelectorAll('#listen input')].indexOf(e.target) + 1, K = `${T.id}:listen`, n = (mark[K] || {}).n || 0;
+  mark[K] = {n: k === n ? k - 1 : k}; store.set('mark', mark); drawListen(); e.target.blur();
+};
 $('#playAll').onclick = () => playing() && mode === 'all' ? stop() : playAll();
 $('#stepMode').onclick = e => { e.target.classList.toggle('on'); store.set('step', e.target.classList.contains('on')); };
 document.querySelectorAll('[data-all]').forEach(b => b.onclick = () => { L().forEach((l, i) => { if(isLine(i)) reveal[i] = b.dataset.all === '1'; }); render(); });
